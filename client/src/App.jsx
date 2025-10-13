@@ -1,18 +1,19 @@
 import { useEffect, useState } from "react";
 
 function App() {
-  const [message, setMessage] = useState("Loading...");
+  const [msg, setMsg] = useState("Loading...");
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/status")
-      .then((res) => res.json())
-      .then((data) => setMessage(data.message))
-      .catch((err) => setMessage("Error connecting to backend"));
+    fetch("http://localhost:5000/api/health")
+      .then((r) => r.json())
+      .then((d) => setMsg(`✅ Backend: ${d.status} @ ${new Date(d.time).toLocaleTimeString()}`))
+      .catch(() => setMsg("❌ Cannot reach backend"));
   }, []);
 
   return (
-    <div className="h-screen flex items-center justify-center bg-gray-100 text-2xl font-semibold text-blue-600">
-      {message}
+    <div className="h-screen flex flex-col items-center justify-center text-center">
+      <h1 className="text-2xl font-bold mb-4">Frontend ↔ Backend Connection Test</h1>
+      <p className="text-lg">{msg}</p>
     </div>
   );
 }
