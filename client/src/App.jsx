@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+fetch(`${API}/api/health`);
 
 function App() {
   const [tests, setTests] = useState([]);
