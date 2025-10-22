@@ -1,3 +1,4 @@
+import { jest } from "@jest/globals";
 import mongoose from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import RefillLog from "../models/RefillLog.js";
@@ -22,8 +23,20 @@ afterEach(async () => {
 });
 
 test("createRefill creates RefillLog entries and updates VendingMachine stock", async () => {
-  const product = await Product.create({ name: "Soda", price: 1.5 });
-  const machine = await VendingMachine.create({ name: "VM1", location: "Office", stock: [] });
+  const machine = await VendingMachine.create({
+    name: "VM1",
+    location: "Office",
+    machineCode: "VM1-CODE",
+    totalSlots: 20,
+    stock: []
+  });
+  const product = await Product.create({
+    name: "Soda",
+    price: 1.5,
+    machineId: machine._id,
+    quantity: 20,
+    category: "drink"
+  });
 
   const req = {
     body: {
@@ -53,9 +66,27 @@ test("createRefill creates RefillLog entries and updates VendingMachine stock", 
 });
 
 test("getRefills returns refill logs", async () => {
-  const product = await Product.create({ name: "Bar", price: 2.0 });
-  const machine = await VendingMachine.create({ name: "VM2", location: "Lobby", stock: [] });
-  await RefillLog.create({ productId: product._id, machineId: machine._id, quantityAdded: 3 });
+  const machine = await VendingMachine.create({
+    name: "VM2",
+    location: "Lobby",
+    machineCode: "VM2-CODE",
+    totalSlots: 16,
+    stock: []
+  });
+  const product = await Product.create({
+    name: "Bar",
+    price: 2.0,
+    machineId: machine._id,
+    quantity: 5,
+    category: "snack"
+  });
+  // include required `refilledBy`
+  await RefillLog.create({
+    productId: product._id,
+    machineId: machine._id,
+    quantityAdded: 3,
+    refilledBy: "system"
+  });
 
   const req = {};
   const res = {

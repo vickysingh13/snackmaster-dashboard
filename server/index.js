@@ -2,21 +2,18 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { connectDB } from "./config/db.js";
+import { connectDB } from "./config/db.js"; // named export
 
 // Routes
 import testRoutes from "./routes/testRoute.js";
-import productRoutes from "./routes/productRoute.js"; // <-- import product routes
+import productRoutes from "./routes/productRoute.js";
 import vendingMachineRoutes from "./routes/vendingMachineRoute.js";
 import refillRoutes from "./routes/refillRoute.js";
-
 
 // Error middleware
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 
 dotenv.config();
-
-import { connectDB } from "./config/db.js"; // named export
 
 (async () => {
   try {
@@ -40,8 +37,7 @@ app.use(express.json());
 
 // Mount routes
 app.use("/api/test", testRoutes);
-app.use("/api/products", productRoutes); // <-- mount product routes
-
+app.use("/api/products", productRoutes);
 app.use("/api/machines", vendingMachineRoutes);
 app.use("/api/refills", refillRoutes);
 
@@ -53,4 +49,25 @@ app.use(notFound);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+const server = app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+
+// Graceful shutdown
+const shutdown = async (signal) => {
+  console.log(`\n⚠️  Received ${signal}. Closing server...`);
+  server.close(() => {
+    console.log("HTTP server closed.");
+    // close mongoose connection
+    import("mongoose").then(({ default: mongoose }) => {
+      mongoose.connection.close(false, () => {
+        console.log("MongoDB connection closed.");
+        process.exit(0);
+      });
+    });
+  });
+};
+
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+
+// export for tests
+export default app;
