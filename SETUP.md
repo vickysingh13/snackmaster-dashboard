@@ -1,29 +1,16 @@
-# SnackMaster Dashboard - Setup
+# SnackMaster Dashboard — Setup Guide
 
-## Prerequisites
+## 📦 Requirements
 - Node.js v24+
+- npm (comes with Node)
 - Git
-- MongoDB Atlas account (create DB user & MONGO_URI)
+- MongoDB Atlas account (create DB user & MONGO_URI) or local MongoDB
 
 ---
 
-##  Server (backend)
-cd server
-npm install
-# Add .env file inside 'server' with MONGO_URI and PORT
-npm run dev
+## 🚀 Installation
 
----
-
-##  Client (frontend)
-cd client
-npm install
-# Add .env.local with:
-VITE_API_URL=http://localhost:5000
-npm run dev
-
----
-
-##  Notes
-- Do NOT commit .env or .env.local files.
-- Use VITE_API_URL to switch between dev, staging, and prod servers.
+### 1. Clone the repository
+```bash
+git clone git@github.com:vdsplofficial/snackmaster-dashboard.git
+cd snackmaster-dashboard
