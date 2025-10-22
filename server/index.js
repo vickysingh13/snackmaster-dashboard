@@ -16,8 +16,21 @@ import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 
 dotenv.config();
 
-// Connect to MongoDB
-connectDB();
+import { connectDB } from "./config/db.js"; // named export
+
+(async () => {
+  try {
+    if (typeof connectDB !== "function") {
+      console.error("❌ connectDB import is not a function. Check server/config/db.js export.");
+      process.exit(1);
+    }
+    await connectDB();
+    console.log("✅ Database connected");
+  } catch (err) {
+    console.error("❌ Startup error:", err);
+    process.exit(1);
+  }
+})();
 
 const app = express();
 

@@ -3,7 +3,8 @@ import VendingMachine from "../models/VendingMachine.js";
 // Get all vending machines
 export const getMachines = async (req, res) => {
   try {
-    const machines = await VendingMachine.find().populate("products.product");
+    // populate the stock.productId (matches server/models/VendingMachine.js)
+    const machines = await VendingMachine.find().populate("stock.productId");
     res.status(200).json(machines);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -13,7 +14,7 @@ export const getMachines = async (req, res) => {
 // Get single machine by ID
 export const getMachineById = async (req, res) => {
   try {
-    const machine = await VendingMachine.findById(req.params.id).populate("products.product");
+    const machine = await VendingMachine.findById(req.params.id).populate("stock.productId");
     if (!machine) return res.status(404).json({ message: "Machine not found" });
     res.status(200).json(machine);
   } catch (err) {
