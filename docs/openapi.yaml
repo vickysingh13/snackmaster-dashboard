@@ -1,0 +1,121 @@
+openapi: 3.0.3
+info:
+  title: SnackMaster Dashboard API
+  version: 1.0.0
+  description: API for SnackMaster vending machine dashboard (backend)
+servers:
+  - url: http://localhost:5000
+paths:
+  /api/machines:
+    get:
+      summary: List vending machines
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VendingMachine'
+    post:
+      summary: Create vending machine
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VendingMachineInput'
+      responses:
+        '201':
+          description: Created
+  /api/machines/{id}:
+    get:
+      summary: Get machine by id
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendingMachine'
+        '404':
+          description: Not Found
+  /api/refills:
+    get:
+      summary: List refill logs
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Create refill log(s)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRefill'
+      responses:
+        '201':
+          description: Created
+components:
+  schemas:
+    VendingMachine:
+      type: object
+      properties:
+        _id:
+          type: string
+        machineCode:
+          type: string
+        location:
+          type: string
+        totalSlots:
+          type: integer
+        stock:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                type: string
+              quantity:
+                type: integer
+    VendingMachineInput:
+      type: object
+      required: [machineCode, location, totalSlots]
+      properties:
+        machineCode: { type: string }
+        location: { type: string }
+        totalSlots: { type: integer }
+    CreateRefill:
+      type: object
+      required: [machine, items, refilledBy]
+      properties:
+        machine:
+          type: string
+        refilledBy:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              product:
+                type: string
+              quantityAdded:
+                type: integer
+    RefillLog:
+      type: object
+      properties:
+        _id: { type: string }
+        productId: { type: string }
+        machineId: { type: string }
+        quantityAdded: { type: integer }
+        refilledBy: { type: string }
+        remarks: { type: string }

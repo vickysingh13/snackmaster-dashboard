@@ -63,3 +63,13 @@ snackmaster-dashboard/
 ├── server/   → Backend (Express)
 └── README.md
 
+# Client — SnackMaster Dashboard
+
+Install and run:
+cd client
+npm install
+npm run dev
+
+Env:
+VITE_API_BASE (optional) e.g. http://localhost:5000/api
+

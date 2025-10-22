@@ -20,6 +20,8 @@
   },
   "dependencies": {
     "dotenv": "^17.2.3",
-    "mongoose": "^8.19.1"
+    "mongoose": "^8.19.1",
+    "swagger-ui-express": "^5.0.1",
+    "yamljs": "^0.3.0"
   }
 }
