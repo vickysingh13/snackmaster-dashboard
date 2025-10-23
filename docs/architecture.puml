@@ -1,0 +1,76 @@
+@startuml
+' Class diagram: data models + controllers + infra
+package "Models" {
+  class VendingMachine {
+    - _id:ObjectId
+    - machineCode:string
+    - location:string
+    - totalSlots:int
+    - stock: [{ productId:ObjectId, quantity:int }]
+    - updateStock(productId, qtyChange)
+  }
+  class Product {
+    - _id:ObjectId
+    - name:string
+    - category:string
+    - price:number
+    - quantity:int
+    - machineId:ObjectId
+  }
+  class RefillLog {
+    - _id:ObjectId
+    - productId:ObjectId
+    - machineId:ObjectId
+    - quantityAdded:int
+    - refilledBy:string
+    - remarks:string
+    + post-save hook: increment Product.quantity
+  }
+}
+
+package "Controllers" {
+  class vendingMachineController {
+    + getMachines(req,res)
+    + getMachineById(req,res)
+    + createMachine(req,res)
+  }
+  class refillController {
+    + getRefills(req,res)
+    + createRefill(req,res)
+  }
+}
+
+package "Infra" {
+  class index_js {
+    + start(): loads dotenv, connectDB(), express app, mount routes, graceful shutdown
+  }
+  class db_js {
+    + connectDB(): validates MONGO_URI, mongoose.connect(uri)
+  }
+  class migrateRefillSchema {
+    + run(): migrate legacy refills -> RefillLog + update machines
+  }
+  class tests {
+    + uses mongodb-memory-server
+  }
+  class routes {
+    + productRoute
+    + vendingMachineRoute
+    + refillRoute
+  }
+}
+
+' Relationships
+VendingMachine --> Product : contains (stock.productId)
+RefillLog --> Product : productId (ref)
+RefillLog --> VendingMachine : machineId (ref)
+refillController --> RefillLog : create logs
+refillController --> VendingMachine : update stock
+index_js --> db_js : uses
+index_js --> routes : mounts
+routes --> vendingMachineController
+routes --> refillController
+migrateRefillSchema --> RefillLog : create
+migrateRefillSchema --> VendingMachine : update
+tests --> controllers : invoke
+@enduml

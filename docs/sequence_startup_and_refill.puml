@@ -1,0 +1,43 @@
+@startuml
+title Startup, Refill request, and Migration flows
+
+actor "Dev / Client" as Client
+participant "index.js\n(Express app)" as Index
+participant "config/db.js\n(connectDB)" as DB
+participant "routes/refillRoute" as Route
+participant "controllers/refillController" as Controller
+participant "models/RefillLog" as RefillLog
+participant "models/Product" as Product
+participant "models/VendingMachine" as VM
+participant "scripts/migrateRefillSchema.js" as Migrator
+
+== Startup ==
+Client -> Index: start node index.js
+Index -> DB: dotenv.config(); connectDB()
+DB --> Index: mongoose connected
+Index -> Index: mount routes, start listening
+
+== Refill request (POST /api/refills) ==
+Client -> Index: POST /api/refills { machine, refilledBy, items[] }
+Index -> Route: route handler
+Route -> Controller: createRefill(body)
+Controller -> VM: findById(machine)
+VM --> Controller: vendingMachine doc
+Controller -> RefillLog: create(log per item)
+RefillLog -> Product: post-save hook -> findByIdAndUpdate($inc quantity)
+Controller -> VM: update stock (push or increment slot)
+VM --> Controller: saved vendingMachine
+Controller -> Index: res.status(201).json({createdLogs})
+Index -> Client: 201 Created
+
+== Migration (scripts/migrateRefillSchema.js) ==
+Dev -> Migrator: node scripts/migrateRefillSchema.js (with MONGO_URI)
+Migrator -> DB: connectDB()
+Migrator -> DB: listCollections -> find 'refills'
+Migrator -> DB: for each legacy doc:
+Migrator -> RefillLog: create entries
+Migrator -> VM: findById & update stock
+Migrator -> DB: insert into refills_migrated; delete original
+Migrator -> Dev: exit(0) on success
+
+@enduml
