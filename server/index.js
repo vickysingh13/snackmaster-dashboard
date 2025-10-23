@@ -9,6 +9,7 @@ import testRoutes from "./routes/testRoute.js";
 import productRoutes from "./routes/productRoute.js";
 import vendingMachineRoutes from "./routes/vendingMachineRoute.js";
 import refillRoutes from "./routes/refillRoute.js";
+import authRoutes from "./routes/authRoute.js";
 
 // Error middleware
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
@@ -40,6 +41,7 @@ app.use("/api/test", testRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/machines", vendingMachineRoutes);
 app.use("/api/refills", refillRoutes);
+app.use("/api/auth", authRoutes);
 
 // Optional root endpoint
 app.get("/", (req, res) => res.send("Hello World from Backend!"));
