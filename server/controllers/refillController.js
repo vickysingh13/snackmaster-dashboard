@@ -16,41 +16,43 @@ export const getRefills = async (req, res) => {
 // Create new refill(s) — accepts body: { machine, refilledBy, items: [{ product, quantityAdded, remarks? }] }
 export const createRefill = async (req, res) => {
   try {
-    const { machine, refilledBy, items } = req.body;
-    if (!machine || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ message: "machine and items[] are required" });
-    }
+    const { machine: machineId, items } = req.body;
+
+    // prefer authenticated user name/id, fallback to body.refilledBy
+    const user = req.user;
+    const refilledByFromBody = req.body.refilledBy;
+    const refilledBy = user ? (user.name || user._id?.toString()) : refilledByFromBody;
+
+    // find machine
+    const machine = await VendingMachine.findById(machineId);
+    if (!machine) return res.status(404).json({ message: "Machine not found" });
 
     const createdLogs = [];
-    const vendingMachine = await VendingMachine.findById(machine);
-    if (!vendingMachine) return res.status(404).json({ message: "Vending machine not found" });
-
-    for (const item of items) {
-      const productId = item.product || item.productId;
-      const qty = Number(item.quantityAdded ?? item.quantity ?? 0);
-      if (!productId || qty <= 0) continue;
+    for (const it of items) {
+      const productId = it.product;
+      const quantityAdded = Number(it.quantityAdded || 0);
+      if (!productId || quantityAdded <= 0) continue;
 
       const log = await RefillLog.create({
         productId,
-        machineId: machine,
-        quantityAdded: qty,
-        refilledBy: refilledBy || null,
-        remarks: item.remarks || ""
+        machineId: machine._id,
+        quantityAdded,
+        refilledBy,
+        remarks: it.remarks || ""
       });
-      createdLogs.push(log);
 
-      const existing = vendingMachine.stock.find(s => s.productId?.toString() === productId.toString());
-      if (existing) {
-        existing.quantity = (existing.quantity || 0) + qty;
-      } else {
-        vendingMachine.stock.push({ productId, quantity: qty });
-      }
+      // update machine stock (use helper)
+      await machine.updateStock(productId, quantityAdded);
+
+      createdLogs.push(log);
     }
 
-    await vendingMachine.save();
+    machine.lastRefilled = new Date();
+    await machine.save();
 
-    res.status(201).json({ message: "Refill logged successfully", createdLogs });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(201).json({ logs: createdLogs });
+  } catch (error) {
+    console.error("createRefill error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };

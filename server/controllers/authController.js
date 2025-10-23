@@ -2,63 +2,52 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
-const signToken = (user) => {
-  const payload = { id: user._id.toString(), role: user.role };
-  return jwt.sign(payload, process.env.JWT_SECRET || "dev_jwt_secret", { expiresIn: "7d" });
-};
+const JWT_SECRET = process.env.JWT_SECRET || "change-me";
+const JWT_EXPIRES = "7d";
 
 export const register = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
-    if (!email || !password) return res.status(400).json({ message: "email & password required" });
 
-    const existingCount = await User.countDocuments();
-
-    // If there are existing users, only an admin can register new users
-    if (existingCount > 0) {
-      const authHeader = req.headers.authorization;
-      if (!authHeader?.startsWith("Bearer ")) return res.status(401).json({ message: "Unauthorized" });
-      const token = authHeader.split(" ")[1];
+    // allow first user to self-register as admin, otherwise only admin can create users
+    const usersCount = await User.countDocuments();
+    if (usersCount > 0) {
+      // if there are users, require requester to be admin
+      const authHeader = req.headers.authorization?.split(" ")[1];
+      if (!authHeader) return res.status(403).json({ message: "Only admin can register new users" });
       try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || "dev_jwt_secret");
-        const adminUser = await User.findById(decoded.id);
-        if (!adminUser || adminUser.role !== "admin") return res.status(403).json({ message: "Forbidden" });
-      } catch (err) {
-        return res.status(401).json({ message: "Invalid token" });
+        const payload = jwt.verify(authHeader, JWT_SECRET);
+        if (payload.role !== "admin") return res.status(403).json({ message: "Only admin can register new users" });
+      } catch {
+        return res.status(403).json({ message: "Only admin can register new users" });
       }
     }
 
-    const existing = await User.findOne({ email });
-    if (existing) return res.status(409).json({ message: "User already exists" });
+    if (await User.findOne({ email })) return res.status(409).json({ message: "Email already in use" });
 
     const hashed = await bcrypt.hash(password, 10);
-    const u = await User.create({ name, email, password: hashed, role: role || "refiller" });
-    const token = signToken(u);
-    return res.status(201).json({
-      token,
-      user: { id: u._id, name: u.name, email: u.email, role: u.role }
-    });
+    const user = await User.create({ name, email, password: hashed, role });
+
+    const token = jwt.sign({ id: user._id, role: user.role, email: user.email }, JWT_SECRET, { expiresIn: JWT_EXPIRES });
+    res.status(201).json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: err.message });
+    console.error("auth.register error:", err);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ message: "email & password required" });
-
-    const user = await User.findOne({ email }).select("+password");
+    const user = await User.findOne({ email });
     if (!user) return res.status(401).json({ message: "Invalid credentials" });
+    const ok = await bcrypt.compare(password, user.password);
+    if (!ok) return res.status(401).json({ message: "Invalid credentials" });
 
-    const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.status(401).json({ message: "Invalid credentials" });
-
-    const token = signToken(user);
-    return res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
+    const token = jwt.sign({ id: user._id, role: user.role, email: user.email }, JWT_SECRET, { expiresIn: JWT_EXPIRES });
+    res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: err.message });
+    console.error("auth.login error:", err);
+    res.status(500).json({ message: "Server error" });
   }
 };
