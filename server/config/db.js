@@ -1,19 +1,40 @@
 import mongoose from "mongoose";
 
-export const connectDB = async () => {
-  const uri = process.env.MONGO_URI;
-  if (!uri) {
-    console.error("❌ MONGO_URI is not set. Add MONGO_URI to server/.env or export it in your shell.");
-    process.exit(1);
-  }
-
-  try {
-    await mongoose.connect(uri); // simplified
-    console.log("✅ MongoDB connected successfully");
-  } catch (err) {
-    console.error("❌ MongoDB connection error:", err);
-    process.exit(1); // Stop server if DB connection fails
-  }
+const DEFAULT_OPTIONS = {
+  // keep defaults but make server selection fail faster for retries
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
+  family: 4 // prefer IPv4
 };
 
-export default connectDB;
+async function connectDB(uri = process.env.MONGO_URI) {
+  if (!uri) {
+    const msg = "MONGO_URI not set. Set MONGO_URI in server/.env or environment.";
+    console.error("❌", msg);
+    throw new Error(msg);
+  }
+
+  const maxRetries = Number(process.env.DB_CONNECT_MAX_RETRIES || 5);
+  const baseDelay = Number(process.env.DB_CONNECT_BASE_DELAY_MS || 2000);
+  let attempt = 0;
+
+  while (attempt <= maxRetries) {
+    try {
+      attempt++;
+      await mongoose.connect(uri, DEFAULT_OPTIONS);
+      console.log("✅ MongoDB connected");
+      return mongoose;
+    } catch (err) {
+      console.error(`MongoDB connection attempt ${attempt} failed: ${err.message}`);
+      if (attempt > maxRetries) {
+        console.error("❌ Exceeded max MongoDB connection attempts.");
+        throw err;
+      }
+      const waitMs = baseDelay * attempt;
+      console.log(`⏳ Retrying in ${waitMs}ms...`);
+      await new Promise((r) => setTimeout(r, waitMs));
+    }
+  }
+}
+
+export { connectDB };
