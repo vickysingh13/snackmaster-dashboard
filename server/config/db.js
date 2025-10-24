@@ -1,13 +1,17 @@
 import mongoose from "mongoose";
 
 const DEFAULT_OPTIONS = {
-  // keep defaults but make server selection fail faster for retries
   serverSelectionTimeoutMS: 5000,
   socketTimeoutMS: 45000,
   family: 4 // prefer IPv4
 };
 
-async function connectDB(uri = process.env.MONGO_URI) {
+export async function connectDB(uri = process.env.MONGO_URI) {
+  if (process.env.SKIP_DB_CONNECT === "true") {
+    console.warn("⚠️  SKIP_DB_CONNECT=true — skipping MongoDB connection (dev only).");
+    return null;
+  }
+
   if (!uri) {
     const msg = "MONGO_URI not set. Set MONGO_URI in server/.env or environment.";
     console.error("❌", msg);
@@ -36,5 +40,3 @@ async function connectDB(uri = process.env.MONGO_URI) {
     }
   }
 }
-
-export { connectDB };
