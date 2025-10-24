@@ -1,57 +1,61 @@
-// src/App.jsx
-import { useEffect, useState } from "react";
+import React, { useState } from "react";
+import { BrowserRouter, Routes, Route, Link, useNavigate } from "react-router-dom";
+import MachinesList from "./pages/MachinesList";
+import MachineDetail from "./pages/MachineDetail";
+import ProductsAdmin from "./pages/ProductsAdmin";
+import DashboardHome from "./pages/DashboardHome";
+import { login } from "./services/api";
+import { setToken, clearToken, getToken } from "./services/auth";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
-fetch(`${API}/api/health`);
+function Login() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const navigate = useNavigate();
 
-function App() {
-  const [tests, setTests] = useState([]);
-  const [input, setInput] = useState("");
-
-  // Fetch all test documents
-  const fetchTests = async () => {
-    const res = await fetch(`${API}/api/test`);
-    const data = await res.json();
-    setTests(data);
+  const submit = async (e) => {
+    e.preventDefault();
+    const res = await login({ email, password });
+    if (res && res.token) {
+      setToken(res.token);
+      navigate("/");
+    } else {
+      alert(res?.message || "Login failed");
+    }
   };
-
-  // Create new test document
-  const addTest = async () => {
-    if (!input) return;
-    await fetch(`${API}/api/test`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: input }),
-    });
-    setInput("");
-    fetchTests(); // Refresh list
-  };
-
-  useEffect(() => {
-    fetchTests();
-  }, []);
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Test Documents</h1>
-      <input
-        type="text"
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        placeholder="Enter test text"
-        className="border p-2 mr-2"
-      />
-      <button onClick={addTest} className="bg-blue-600 text-white p-2">Add Test</button>
-
-      <ul className="mt-4">
-        {tests.map((t) => (
-          <li key={t._id}>
-            {t.text} (ID: {t._id})
-          </li>
-        ))}
-      </ul>
-    </div>
+    <form onSubmit={submit} className="p-4">
+      <h2>Login</h2>
+      <input placeholder="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+      <input placeholder="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+      <button type="submit">Login</button>
+    </form>
   );
 }
 
-export default App;
+export default function App() {
+  const token = getToken();
+
+  return (
+    <BrowserRouter>
+      <div className="p-3 border-b flex justify-between">
+        <div>
+          <Link to="/" className="mr-4">Dashboard</Link>
+          <Link to="/machines" className="mr-4">Machines</Link>
+          <Link to="/products" className="mr-4">Products</Link>
+        </div>
+        <div>
+          {token ? <button onClick={() => { clearToken(); window.location.reload(); }}>Logout</button> : <Link to="/login">Login</Link>}
+        </div>
+      </div>
+
+      <Routes>
+        <Route path="/" element={<DashboardHome />} />
+        <Route path="/machines" element={<MachinesList />} />
+        <Route path="/machines/:id" element={<MachineDetail />} />
+        <Route path="/products" element={<ProductsAdmin />} />
+        <Route path="/login" element={<Login />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
