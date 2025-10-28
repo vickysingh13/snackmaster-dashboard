@@ -1,42 +1,36 @@
 import mongoose from "mongoose";
+import { info, warn, error as logError } from "../utils/logger.js";
 
-const DEFAULT_OPTIONS = {
-  serverSelectionTimeoutMS: 5000,
-  socketTimeoutMS: 45000,
-  family: 4 // prefer IPv4
-};
-
-export async function connectDB(uri = process.env.MONGO_URI) {
-  if (process.env.SKIP_DB_CONNECT === "true") {
-    console.warn("⚠️  SKIP_DB_CONNECT=true — skipping MongoDB connection (dev only).");
-    return null;
-  }
-
+export async function connectDB() {
+  const uri = process.env.MONGO_URI;
   if (!uri) {
     const msg = "MONGO_URI not set. Set MONGO_URI in server/.env or environment.";
-    console.error("❌", msg);
+    if (process.env.NODE_ENV === "test") {
+      warn("⚠️", msg, "Skipping connect in test environment.");
+      return;
+    }
     throw new Error(msg);
   }
 
-  const maxRetries = Number(process.env.DB_CONNECT_MAX_RETRIES || 5);
-  const baseDelay = Number(process.env.DB_CONNECT_BASE_DELAY_MS || 2000);
-  let attempt = 0;
-
-  while (attempt <= maxRetries) {
-    try {
-      attempt++;
-      await mongoose.connect(uri, DEFAULT_OPTIONS);
-      console.log("✅ MongoDB connected");
-      return mongoose;
-    } catch (err) {
-      console.error(`MongoDB connection attempt ${attempt} failed: ${err.message}`);
-      if (attempt > maxRetries) {
-        console.error("❌ Exceeded max MongoDB connection attempts.");
-        throw err;
-      }
-      const waitMs = baseDelay * attempt;
-      console.log(`⏳ Retrying in ${waitMs}ms...`);
-      await new Promise((r) => setTimeout(r, waitMs));
-    }
+  try {
+    mongoose.set("strictQuery", false);
+    await mongoose.connect(uri);
+    info("MongoDB connected");
+  } catch (err) {
+    logError("MongoDB connection failed:", err);
+    throw err;
   }
 }
+
+export async function disconnectDB() {
+  try {
+    if (mongoose.connection?.readyState) {
+      await mongoose.disconnect();
+      info("MongoDB disconnected");
+    }
+  } catch (err) {
+    logError("Error disconnecting MongoDB:", err);
+  }
+}
+
+export default mongoose;

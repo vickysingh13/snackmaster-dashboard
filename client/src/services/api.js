@@ -1,48 +1,65 @@
-import axios from "axios";
-
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+const authHeader = (token) => (token ? { Authorization: `Bearer ${token}` } : {});
+
+const handleResponse = async (res) => {
+  const text = await res.text();
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = text;
+  }
+  if (!res.ok) {
+    const err = new Error((data && data.message) || res.statusText || "Request failed");
+    err.status = res.status;
+    err.data = data;
+    throw err;
+  }
+  return data;
+};
 
 export const fetchMachines = (token) =>
   fetch(`${API}/api/machines`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {}
-  }).then((r) => r.json());
+    headers: { ...authHeader(token) },
+  }).then(handleResponse);
 
 export const fetchMachine = (id, token) =>
   fetch(`${API}/api/machines/${id}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {}
-  }).then((r) => r.json());
+    headers: { ...authHeader(token) },
+  }).then(handleResponse);
 
 export const fetchProducts = (token) =>
   fetch(`${API}/api/products`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {}
-  }).then((r) => r.json());
+    headers: { ...authHeader(token) },
+  }).then(handleResponse);
 
 export const postRefill = (payload, token) =>
   fetch(`${API}/api/refills`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
+      ...authHeader(token),
     },
-    body: JSON.stringify(payload)
-  }).then((r) => r.json());
+    body: JSON.stringify(payload),
+  }).then(handleResponse);
 
 export const createProduct = (payload, token) =>
   fetch(`${API}/api/products`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
+      ...authHeader(token),
     },
-    body: JSON.stringify(payload)
-  }).then((r) => r.json());
+    body: JSON.stringify(payload),
+  }).then(handleResponse);
 
 export const login = (credentials) =>
   fetch(`${API}/api/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(credentials)
-  }).then((r) => r.json());
+    body: JSON.stringify(credentials),
+  }).then(handleResponse);
 
 export default {
   fetchMachines,
@@ -50,5 +67,5 @@ export default {
   fetchProducts,
   postRefill,
   createProduct,
-  login
+  login,
 };

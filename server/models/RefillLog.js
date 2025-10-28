@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { info } from "../utils/logger.js";
 
 const refillLogSchema = new mongoose.Schema({
   productId: {
@@ -42,7 +43,7 @@ refillLogSchema.post("save", async function (doc) {
       { new: true }
     );
 
-    console.log(`✅ Stock updated for Product ID: ${doc.productId}`);
+    info(`Stock updated for Product ID: ${doc.productId}`);
   } catch (error) {
     console.error("❌ Error updating product stock from refill log:", error.message);
   }
