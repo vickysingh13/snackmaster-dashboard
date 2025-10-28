@@ -1,9 +1,9 @@
-import dotenv from "dotenv";
-dotenv.config();
+import "dotenv/config";
 
 import express from "express";
 import cors from "cors";
-import { connectDB } from "./config/db.js"; // named export
+import { connectDB, disconnectDB } from "./config/db.js"; // named exports
+import { info, warn, error as logError } from "./utils/logger.js";
 
 // Routes
 import testRoutes from "./routes/testRoute.js";
@@ -38,30 +38,32 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 let server;
 
-const start = async () => {
+export const start = async () => {
   try {
     await connectDB();
-    server = app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+    server = app.listen(PORT, () => info(`Server running on port ${PORT}`));
+    return server;
   } catch (err) {
-    console.error("❌ MongoDB connection error:", err);
+    logError("MongoDB connection error:", err);
+    // In test environment throw instead of exiting so test runners can handle it
+    if (process.env.NODE_ENV === "test") throw err;
     process.exit(1);
   }
 };
 
 // Graceful shutdown
-const shutdown = async (signal) => {
-  console.log(`\n⚠️  Received ${signal}. Closing server...`);
-  if (server) {
-    server.close(() => {
-      console.log("HTTP server closed.");
-      import("mongoose").then(({ default: mongoose }) => {
-        mongoose.connection.close(false, () => {
-          console.log("MongoDB connection closed.");
-          process.exit(0);
-        });
-      });
-    });
-  } else {
+export const shutdown = async (signal) => {
+  info(`\nReceived ${signal}. Closing server...`);
+  try {
+    if (server) {
+      await new Promise((resolve) => server.close(resolve));
+      info("HTTP server closed.");
+    }
+    await disconnectDB();
+    info("Shutdown complete.");
+  } catch (err) {
+    logError("Error during shutdown:", err);
+  } finally {
     process.exit(0);
   }
 };
@@ -69,8 +71,10 @@ const shutdown = async (signal) => {
 process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 
-// start after setup
-start();
+// start only in non-test env to avoid interfering with tests which manage DB lifecycle
+if (process.env.NODE_ENV !== "test") {
+  start();
+}
 
-// export for tests
+// export app for tests
 export default app;
