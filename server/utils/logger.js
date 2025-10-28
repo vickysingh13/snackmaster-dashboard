@@ -1,4 +1,3 @@
-// ...new file...
 const isTest = process.env.NODE_ENV === "test";
 
 function formatArgs(args) {
@@ -8,7 +7,6 @@ function formatArgs(args) {
 
 export const info = (...args) => {
   if (isTest) return;
-  // use console.info so CI/term highlights info separately if desired
   console.info(...formatArgs(args));
 };
 
@@ -18,9 +16,8 @@ export const warn = (...args) => {
 };
 
 export const error = (...args) => {
-  // always print errors even in tests (helps debugging)
+  // always print errors even in tests
   console.error(...formatArgs(args));
 };
 
 export default { info, warn, error };
-// ...new file...
