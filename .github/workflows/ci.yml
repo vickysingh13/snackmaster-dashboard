@@ -5,40 +5,52 @@ on:
   pull_request:
 
 jobs:
-  server:
-    name: Server CI
+  lint-test:
+    name: Lint & Unit Tests
     runs-on: ubuntu-latest
     strategy:
       matrix:
         node-version: [22]
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
+      - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-      - name: Install & test server
+      - name: Install & run server lint/tests
         working-directory: server
         run: |
           npm ci
           npm run lint
           npm test
 
-  client:
-    name: Client CI
+  integration:
+    name: Integration (docker-compose)
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [22]
+    needs: lint-test
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-      - name: Install & build client
-        working-directory: client
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Build & start stack
+        run: |
+          docker compose -f docker-compose.yml up --build -d
+          # wait for server health
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:5000/api/health >/dev/null; then
+              echo "server healthy"
+              break
+            fi
+            echo "waiting for server..."
+            sleep 2
+          done
+      - name: Run server tests against stack
+        working-directory: server
         run: |
           npm ci
-          npm run lint || true
-          npm run build || true
+          npm test
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.yml down -v
