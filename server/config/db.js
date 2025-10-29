@@ -28,8 +28,6 @@ export async function connectDB(retries = DEFAULT_RETRIES) {
       logError(attemptMsg);
       if (attempt === retries) throw err;
       info(`Retrying in ${RETRY_DELAY_MS}ms...`);
-      // pause before retry
-      // eslint-disable-next-line no-await-in-loop
       await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
     }
   }

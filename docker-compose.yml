@@ -5,17 +5,16 @@ services:
     container_name: snackmaster-mongo
     ports:
       - "27017:27017"
-    volumes:
-      - mongo-data:/data/db
     environment:
       MONGO_INITDB_DATABASE: snackmaster
+    volumes:
+      - mongo-data:/data/db
 
   server:
     build: ./server
+    container_name: snackmaster-server
     working_dir: /app
-    volumes:
-      - ./server:/app
-      - /app/node_modules
+    command: sh -c "npm ci && npm run dev"
     ports:
       - "5000:5000"
     env_file:

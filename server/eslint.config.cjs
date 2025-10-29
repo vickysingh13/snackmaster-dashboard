@@ -6,7 +6,7 @@ module.exports = [
     env: { node: true, es2021: true, jest: true },
     extends: "eslint:recommended",
     rules: {
-      // project rule overrides go here
+      "no-console": "off"
     }
   }
 ];
