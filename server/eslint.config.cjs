@@ -5,6 +5,8 @@ module.exports = [
     languageOptions: { ecmaVersion: 2021, sourceType: "module" },
     env: { node: true, es2021: true, jest: true },
     extends: "eslint:recommended",
-    rules: {}
+    rules: {
+      // project rule overrides go here
+    }
   }
 ];

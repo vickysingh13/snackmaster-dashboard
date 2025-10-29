@@ -1,11 +1,12 @@
-import "dotenv/config";
-
+import config from "./config/index.js";
+// dotenv is loaded by config/index.js
 import express from "express";
 import cors from "cors";
 import { connectDB, disconnectDB } from "./config/db.js"; // named exports
 import { info, warn, error as logError } from "./utils/logger.js";
+import mongoose from "mongoose";
 
-// Routes
+// Routes (existing imports)
 import testRoutes from "./routes/testRoute.js";
 import productRoutes from "./routes/productRoute.js";
 import vendingMachineRoutes from "./routes/vendingMachineRoute.js";
@@ -28,6 +29,16 @@ app.use("/api/machines", vendingMachineRoutes);
 app.use("/api/refills", refillRoutes);
 app.use("/api/auth", authRoutes);
 
+// Health endpoint (checks DB and app)
+app.get("/api/health", (req, res) => {
+  const dbState = mongoose.connection?.readyState || 0; // 1 = connected
+  res.json({
+    ok: dbState === 1,
+    db: { readyState: dbState },
+    env: { nodeEnv: config.NODE_ENV },
+  });
+});
+
 // Optional root endpoint
 app.get("/", (req, res) => res.send("Hello World from Backend!"));
 
@@ -45,8 +56,7 @@ export const start = async () => {
     return server;
   } catch (err) {
     logError("MongoDB connection error:", err);
-    // In test environment throw instead of exiting so test runners can handle it
-    if (process.env.NODE_ENV === "test") throw err;
+    if (config.NODE_ENV === "test") throw err;
     process.exit(1);
   }
 };
@@ -71,8 +81,8 @@ export const shutdown = async (signal) => {
 process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 
-// start only in non-test env to avoid interfering with tests which manage DB lifecycle
-if (process.env.NODE_ENV !== "test") {
+// start only in non-test env to avoid interfering with tests
+if (config.NODE_ENV !== "test") {
   start();
 }
 
