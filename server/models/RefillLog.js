@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { info } from "../utils/logger.js";
+import { info, error as logError } from "../utils/logger.js";
 
 const refillLogSchema = new mongoose.Schema({
   productId: {
@@ -31,21 +31,15 @@ const refillLogSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-// 🧠 Middleware: update product quantity automatically when refill log is created
+// post-save hook: increment product quantity safely
 refillLogSchema.post("save", async function (doc) {
   try {
     const Product = mongoose.model("Product");
-
-    // Increment the product quantity after refill
-    await Product.findByIdAndUpdate(
-      doc.productId,
-      { $inc: { quantity: doc.quantityAdded } },
-      { new: true }
-    );
-
+    // increment product quantity by quantityAdded
+    await Product.findByIdAndUpdate(doc.productId, { $inc: { quantity: doc.quantityAdded } });
     info(`Stock updated for Product ID: ${doc.productId}`);
   } catch (error) {
-    console.error("❌ Error updating product stock from refill log:", error.message);
+    logError("Error updating product quantity after refill:", error);
   }
 });
 
