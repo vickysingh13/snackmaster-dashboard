@@ -1,58 +1,72 @@
-// Correct imports (match actual filenames)
+import mongoose from "mongoose";
 import RefillLog from "../models/RefillLog.js";
 import Product from "../models/Product.js";
 import VendingMachine from "../models/VendingMachine.js";
 
-// Get all refill logs
-export const getRefills = async (req, res) => {
+/**
+ * POST /api/refills
+ * body: { productId, machineId, quantityAdded, refilledBy, remarks }
+ * Uses a MongoDB transaction to ensure atomicity.
+ */
+export const createRefill = async (req, res, next) => {
+  const { productId, machineId, quantityAdded, refilledBy, remarks } = req.body;
+
+  const session = await mongoose.startSession();
   try {
-    const refills = await RefillLog.find().populate("machineId").populate("productId");
-    res.status(200).json(refills);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
+    session.startTransaction();
 
-// Create new refill(s) — accepts body: { machine, refilledBy, items: [{ product, quantityAdded, remarks? }] }
-export const createRefill = async (req, res) => {
-  try {
-    const { machine: machineId, items } = req.body;
+    const refill = await RefillLog.create(
+      [
+        {
+          productId,
+          machineId,
+          quantityAdded,
+          refilledBy,
+          remarks,
+        },
+      ],
+      { session }
+    );
 
-    // prefer authenticated user name/id, fallback to body.refilledBy
-    const user = req.user;
-    const refilledByFromBody = req.body.refilledBy;
-    const refilledBy = user ? (user.name || user._id?.toString()) : refilledByFromBody;
-
-    // find machine
-    const machine = await VendingMachine.findById(machineId);
-    if (!machine) return res.status(404).json({ message: "Machine not found" });
-
-    const createdLogs = [];
-    for (const it of items) {
-      const productId = it.product;
-      const quantityAdded = Number(it.quantityAdded || 0);
-      if (!productId || quantityAdded <= 0) continue;
-
-      const log = await RefillLog.create({
-        productId,
-        machineId: machine._id,
-        quantityAdded,
-        refilledBy,
-        remarks: it.remarks || ""
-      });
-
-      // update machine stock (use helper)
-      await machine.updateStock(productId, quantityAdded);
-
-      createdLogs.push(log);
+    if (refilledBy === "force-fail") {
+      throw new Error("Simulated failure after creating refill (testing rollback)");
     }
 
-    machine.lastRefilled = new Date();
-    await machine.save();
+    await Product.findByIdAndUpdate(
+      productId,
+      { $inc: { quantity: quantityAdded } },
+      { session }
+    );
 
-    res.status(201).json({ logs: createdLogs });
-  } catch (error) {
-    console.error("createRefill error:", error);
-    res.status(500).json({ message: "Server error" });
+    await VendingMachine.updateOne(
+      { _id: machineId, "stock.product": productId },
+      { $inc: { "stock.$.quantity": quantityAdded } },
+      { session }
+    );
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.status(201).json(refill[0]);
+  } catch (err) {
+    try {
+      await session.abortTransaction();
+    } catch (abortErr) {
+      // ignore
+    } finally {
+      session.endSession();
+    }
+
+    // Safely handle when next is not provided (tests sometimes call controller directly)
+    if (typeof next === "function") {
+      return next(err);
+    }
+
+    // Fallback response when called without Express next()
+    // eslint-disable-next-line no-console
+    console.error("Unhandled controller error:", err);
+    return res.status(500).json({ message: err.message || "Internal Server Error" });
   }
 };
+
+export default { createRefill };

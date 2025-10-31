@@ -24,10 +24,10 @@ export async function connectDB(retries = DEFAULT_RETRIES) {
       info("MongoDB connected");
       return;
     } catch (err) {
-      const attemptMsg = `MongoDB connect attempt ${attempt + 1} failed: ${err.message}`;
-      logError(attemptMsg);
+      logError(`MongoDB connect attempt ${attempt + 1} failed: ${err.message}`);
       if (attempt === retries) throw err;
-      info(`Retrying in ${RETRY_DELAY_MS}ms...`);
+      info(`Retrying MongoDB connect in ${RETRY_DELAY_MS}ms...`);
+      // eslint-disable-next-line no-await-in-loop
       await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
     }
   }

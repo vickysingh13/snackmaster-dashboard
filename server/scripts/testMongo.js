@@ -1,5 +1,6 @@
 import "dotenv/config";
 import mongoose from "mongoose";
+import { connectDB, disconnectDB } from "../config/db.js";
 
 const uri = process.env.MONGO_URI;
 if (!uri) {
@@ -9,15 +10,13 @@ if (!uri) {
 
 async function test() {
   try {
-    console.log("Testing MongoDB connection...");
-    // optional: use DB name from env if provided
-    await mongoose.connect(uri, { dbName: process.env.MONGO_DBNAME || undefined });
+    await connectDB();
     console.log("MongoDB connection OK");
-    await mongoose.disconnect();
+    await disconnectDB();
     process.exit(0);
   } catch (err) {
-    console.error("MongoDB connection FAILED:", err.message);
-    process.exit(3);
+    console.error("MongoDB connection FAILED:", err.message || err);
+    process.exit(1);
   }
 }
 

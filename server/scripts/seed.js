@@ -4,38 +4,56 @@ import Product from "../models/Product.js";
 import VendingMachine from "../models/VendingMachine.js";
 import RefillLog from "../models/RefillLog.js";
 import { info, error as logError } from "../utils/logger.js";
-import mongoose from "mongoose";
 
 if (process.env.NODE_ENV === "production") {
   logError("Refusing to run seed script in production");
   process.exit(1);
 }
 
+// ---------- Safety: refuse to seed a production Atlas DB ----------
+const MONGO_URI = process.env.MONGO_URI || "";
+const isAtlas = /(\.mongodb\.net|^mongodb\+srv:)/i.test(MONGO_URI);
+
+// If the URI points to Atlas and we're in production -> always refuse
+if (isAtlas && process.env.NODE_ENV === "production") {
+  logError("Refusing to run seed: MONGO_URI points to Atlas and NODE_ENV=production.");
+  process.exit(1);
+}
+
+// If the URI points to Atlas in non-production, require an explicit override to avoid accidental runs.
+// Set ALLOW_SEED=true in the environment to bypass this protection (dangerous).
+if (isAtlas && process.env.ALLOW_SEED !== "true") {
+  logError(
+    "Refusing to run seed: MONGO_URI appears to point to MongoDB Atlas.\n" +
+      "To run the seed against Atlas explicitly set ALLOW_SEED=true in your environment (use with caution)."
+  );
+  process.exit(1);
+}
+// ---------- end safety check ----------
+
 async function seed() {
   try {
-    if (!process.env.MONGO_URI) {
-      logError("MONGO_URI not set. Add it to server/.env or environment and try again.");
-      process.exit(2);
+    if (!process.env.MONGO_URI && !process.env.NODE_ENV) {
+      // allow connectDB to use local fallback, but warn user
+      info("MONGO_URI not set — using local fallback (dev only).");
     }
 
     await connectDB();
 
-    // WARNING: deletes collections — safe for dev only
+    // WARNING: destructive for dev only
     await Promise.all([
       Product.deleteMany({}),
       VendingMachine.deleteMany({}),
       RefillLog.deleteMany({}),
     ]);
 
-    // 1) create machine first (set required totalSlots)
     const machine = await VendingMachine.create({
       machineCode: "VM-001",
       location: "Dev - Dock",
-      totalSlots: 100, // ensure total stocked items fit the machine validation
-      stock: [],       // will populate after products created
+      totalSlots: 100,
+      stock: [],
     });
 
-    // 2) create products with required fields (machineId and category)
     const products = await Product.create([
       {
         name: "Choco Bar",
@@ -55,7 +73,6 @@ async function seed() {
       },
     ]);
 
-    // 3) update machine stock to reference created products
     machine.stock = [
       {
         slot: 1,
@@ -74,7 +91,6 @@ async function seed() {
     ];
     await machine.save();
 
-    // 4) create a refill log entry referencing product and machine
     const refill = await RefillLog.create({
       productId: products[0]._id,
       machineId: machine._id,
