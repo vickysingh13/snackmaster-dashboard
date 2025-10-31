@@ -5,3 +5,4 @@ dist/
 # local env files
 client/.env
 server/.env
+snackmaster-dashboard.zip
