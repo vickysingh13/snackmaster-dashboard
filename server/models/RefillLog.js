@@ -31,16 +31,20 @@ const refillLogSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-// post-save hook: increment product quantity safely
-refillLogSchema.post("save", async function (doc) {
-  try {
-    const Product = mongoose.model("Product");
-    // increment product quantity by quantityAdded
-    await Product.findByIdAndUpdate(doc.productId, { $inc: { quantity: doc.quantityAdded } });
-    info(`Stock updated for Product ID: ${doc.productId}`);
-  } catch (error) {
-    logError("Error updating product quantity after refill:", error);
-  }
-});
+// Post-save hook is now opt-in to avoid duplicate updates when controller handles increments.
+// Set USE_REFILL_HOOK=true in env to enable this legacy behavior (not recommended).
+if (String(process.env.USE_REFILL_HOOK).toLowerCase() === "true") {
+  refillLogSchema.post("save", async function (doc) {
+    try {
+      const Product = mongoose.model("Product");
+      await Product.findByIdAndUpdate(doc.productId, { $inc: { quantity: doc.quantityAdded } });
+      // eslint-disable-next-line no-console
+      console.info("RefillHook: Stock updated for Product ID:", doc.productId);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error("RefillHook error updating product quantity:", error);
+    }
+  });
+}
 
 export default mongoose.model("RefillLog", refillLogSchema);

@@ -9,12 +9,13 @@
     "lint": "eslint . --ext .js",
     "test": "NODE_ENV=test jest --runInBand --detectOpenHandles",
     "seed": "node scripts/seed.js",
+    "seed:atlas": "ALLOW_SEED=true node scripts/seed.js",
     "list:products": "node scripts/listProducts.js",
     "dropdb": "node scripts/dropDatabase.js",
     "docs": "jsdoc -c jsdoc.json"
   },
   "dependencies": {
-    "bcrypt": "^6.0.0",
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^4.19.2",

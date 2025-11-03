@@ -1,28 +1,34 @@
 import express from "express";
-import {
-  getProducts,
-  getProductById,
-  createProduct,
-  updateProduct,
-  deleteProduct
-} from "../controllers/productController.js";
-import { protect, authorize } from "../middleware/authMiddleware.js";
 import { body } from "express-validator";
-import validateRequest from "../middleware/validateRequest.js";
 import asyncHandler from "../middleware/asyncHandler.js";
+import validateRequest from "../middleware/validateRequest.js";
+import { protect, authorize } from "../middleware/authMiddleware.js";
+import * as productController from "../controllers/productController.js";
 
 const router = express.Router();
 
-router.get("/", getProducts);        // Get all products
-router.get("/:id", getProductById);  // Get product by ID
+// Public: list and get are public for integration tests and public API
+router.get(
+  "/",
+  asyncHandler(productController.getProducts)
+); // Get all products
+
+router.get(
+  "/:id",
+  asyncHandler(productController.getProductById)
+); // Get product by ID
+
+// Protected: only authenticated & authorized users can create products
 router.post(
   "/",
-  [body("name").isString().notEmpty(), body("price").isNumeric()],
+  protect,
+  authorize("admin", "operator"),
+  [
+    body("name").isString().notEmpty().withMessage("name is required"),
+    body("price").isNumeric().withMessage("price must be a number"),
+  ],
   validateRequest,
-  asyncHandler(createProduct)
-);     // Create product
-router.put("/:id", updateProduct);   // Update product
-// DELETE product (admin only)
-router.delete("/:id", protect, authorize("admin"), deleteProduct); // Delete product
+  asyncHandler(productController.createProduct)
+); // Create product
 
 export default router;

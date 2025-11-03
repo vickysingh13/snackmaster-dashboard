@@ -1,0 +1,88 @@
+{
+  "info": {
+    "name": "SnackMaster Backend",
+    "description": "Collection for local backend API (http://localhost:5000). No credentials included.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "health"]
+        }
+      }
+    },
+    {
+      "name": "Auth - Register",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Tester\",\n  \"email\": \"tester@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"operator\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"] }
+      }
+    },
+    {
+      "name": "Auth - Login",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"tester@example.com\",\n  \"password\": \"password123\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+      }
+    },
+    {
+      "name": "Refills - List",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{baseUrl}}/api/refills", "host": ["{{baseUrl}}"], "path": ["api", "refills"] }
+      }
+    },
+    {
+      "name": "Refills - Create",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"productId\": \"<productId>\",\n  \"machineId\": \"<machineId>\",\n  \"quantityAdded\": 10,\n  \"refilledBy\": \"operator1\",\n  \"remarks\": \"manual refill\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/refills", "host": ["{{baseUrl}}"], "path": ["api", "refills"] }
+      }
+    },
+    {
+      "name": "Products - List",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{baseUrl}}/api/products", "host": ["{{baseUrl}}"], "path": ["api", "products"] }
+      }
+    },
+    {
+      "name": "Machines - List",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{baseUrl}}/api/machines", "host": ["{{baseUrl}}"], "path": ["api", "machines"] }
+      }
+    }
+  ]
+}
