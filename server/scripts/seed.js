@@ -10,9 +10,14 @@ if (process.env.NODE_ENV === "production") {
   process.exit(1);
 }
 
-// ---------- Safety: refuse to seed a production Atlas DB ----------
+// ---------- Safety: refuse to seed a production Atlas DB unless explicitly allowed ----------
 const MONGO_URI = process.env.MONGO_URI || "";
 const isAtlas = /(\.mongodb\.net|^mongodb\+srv:)/i.test(MONGO_URI);
+
+// Allow override via env or CLI flag for non-production usage:
+const allowSeedEnv = String(process.env.ALLOW_SEED || "").toLowerCase() === "true";
+const allowSeedFlag = process.argv.includes("--allow-seed") || process.argv.includes("--force");
+const allowOverride = allowSeedEnv || allowSeedFlag;
 
 // If the URI points to Atlas and we're in production -> always refuse
 if (isAtlas && process.env.NODE_ENV === "production") {
@@ -21,20 +26,22 @@ if (isAtlas && process.env.NODE_ENV === "production") {
 }
 
 // If the URI points to Atlas in non-production, require an explicit override to avoid accidental runs.
-// Set ALLOW_SEED=true in the environment to bypass this protection (dangerous).
-if (isAtlas && process.env.ALLOW_SEED !== "true") {
+if (isAtlas && !allowOverride) {
   logError(
     "Refusing to run seed: MONGO_URI appears to point to MongoDB Atlas.\n" +
-      "To run the seed against Atlas explicitly set ALLOW_SEED=true in your environment (use with caution)."
+      "To run the seed against Atlas explicitly set ALLOW_SEED=true or pass --allow-seed (use with extreme caution)."
   );
   process.exit(1);
+}
+
+if (isAtlas && allowOverride) {
+  info("WARNING: Seeding MongoDB Atlas with explicit override enabled. Proceeding with caution.");
 }
 // ---------- end safety check ----------
 
 async function seed() {
   try {
     if (!process.env.MONGO_URI && !process.env.NODE_ENV) {
-      // allow connectDB to use local fallback, but warn user
       info("MONGO_URI not set — using local fallback (dev only).");
     }
 
