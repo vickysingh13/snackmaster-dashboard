@@ -1,0 +1,8 @@
+- [ ] Repo cloned and opened in devcontainer
+- [ ] npm install executed in server/
+- [ ] .env set up (no production secrets committed)
+- [ ] Tests run: NODE_ENV=test npm test -> all pass
+- [ ] Dev server started: npm run dev -> reachable on port 5000
+- [ ] Postman collection created (optional)
+- [ ] Credentials rotated (if handing over production)
+- [ ] CI added or plan documented
